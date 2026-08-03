@@ -290,6 +290,7 @@ async def verify(
 
 
 
+@app_commands.checks.has_permissions(administrator=True)
 @bot.tree.command(
     name="clancheck",
     description="Check Hidden Cloud Village API members"
@@ -312,6 +313,7 @@ async def clancheck(
 
 
 
+@app_commands.checks.has_permissions(administrator=True)
 @bot.tree.command(
     name="verified",
     description="Show all verified Hidden Cloud Village members"
@@ -369,7 +371,25 @@ async def verified(
     )
 
 
+@bot.tree.error
+async def on_app_command_error(
+    interaction: discord.Interaction,
+    error: app_commands.AppCommandError
+):
 
+    if isinstance(
+        error,
+        app_commands.MissingPermissions
+    ):
+
+        await interaction.response.send_message(
+            "❌ You do not have permission to use this command.",
+            ephemeral=True
+        )
+
+        return
+
+    raise error
 
 
 bot.run(TOKEN)
