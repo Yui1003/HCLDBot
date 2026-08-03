@@ -1,0 +1,5 @@
+.env
+clan_guard.db
+database.db
+__pycache__/
+*.pyc
