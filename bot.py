@@ -11,7 +11,8 @@ import os
 from database import (
     setup_database,
     add_user,
-    mark_removed
+    mark_removed,
+    get_verified_users
 )
 
 
@@ -153,8 +154,7 @@ async def clan_check():
 
 
             print(
-                "Kick disabled. "
-                "Dry-run mode."
+                "Kick disabled. Dry-run mode."
             )
 
 
@@ -237,6 +237,8 @@ async def clan_check():
 
 
 
+
+
 @bot.event
 async def on_ready():
 
@@ -257,6 +259,8 @@ async def on_ready():
     if not clan_check.is_running():
 
         clan_check.start()
+
+
 
 
 
@@ -293,6 +297,8 @@ async def verify(
 
 
 
+
+
 @bot.tree.command(
     name="clancheck",
     description="Check Hidden Cloud Village API members"
@@ -309,6 +315,70 @@ async def clancheck(
         f"Members found: `{len(members)}`\n\n"
         f"`{members[:50]}`"
     )
+
+
+
+
+
+
+
+@bot.tree.command(
+    name="verified",
+    description="Show all verified Hidden Cloud Village members"
+)
+async def verified(
+    interaction: discord.Interaction
+):
+
+    users = await get_verified_users()
+
+
+    if not users:
+
+        await interaction.response.send_message(
+            "No verified players found."
+        )
+
+        return
+
+
+
+    embed = discord.Embed(
+        title="☁️ Verified Clan Members",
+        color=discord.Color.blue()
+    )
+
+
+    for discord_id, game_id, ign in users:
+
+
+        member = interaction.guild.get_member(
+            discord_id
+        )
+
+
+        if member:
+
+            discord_name = member.display_name
+
+        else:
+
+            discord_name = "Unknown"
+
+
+
+        embed.add_field(
+            name=f"{game_id} - {ign}",
+            value=f"Discord: {discord_name}",
+            inline=False
+        )
+
+
+    await interaction.response.send_message(
+        embed=embed
+    )
+
+
 
 
 

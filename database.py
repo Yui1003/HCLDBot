@@ -94,6 +94,30 @@ async def get_users():
 
 
 
+# NEW COMMAND SUPPORT
+async def get_verified_users():
+
+    async with aiosqlite.connect(DB_NAME) as db:
+
+        cursor = await db.execute(
+            """
+            SELECT
+                discord_id,
+                game_id,
+                ign
+
+            FROM users
+
+            WHERE removed = 0
+
+            ORDER BY game_id
+            """
+        )
+
+        return await cursor.fetchall()
+
+
+
 async def update_missing(
     discord_id,
     missing
