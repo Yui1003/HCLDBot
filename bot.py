@@ -228,6 +228,17 @@ async def on_ready():
         id=GUILD_ID
     )
 
+    print(
+        f"Commands loaded: {len(bot.tree.get_commands())}",
+        flush=True
+    )
+
+    for command in bot.tree.get_commands():
+        print(
+            f"Command: {command.name}",
+            flush=True
+        )
+
     print("SYNCING COMMANDS...", flush=True)
 
     synced = await bot.tree.sync(
