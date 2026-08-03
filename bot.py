@@ -65,6 +65,17 @@ class ClanGuard(commands.Bot):
             flush=True
         )
 
+        print("CLEARING GLOBAL COMMANDS...", flush=True)
+
+        self.tree.clear_commands(
+            guild=None
+        )
+
+        await self.tree.sync()
+
+        print("GLOBAL COMMANDS CLEARED", flush=True)
+
+
         synced = await self.tree.sync(
             guild=guild
         )
