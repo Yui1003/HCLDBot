@@ -53,18 +53,7 @@ class ClanGuard(commands.Bot):
 
         print("DATABASE READY", flush=True)
 
-        guild = discord.Object(
-            id=GUILD_ID
-        )
 
-        synced = await self.tree.sync(
-            guild=guild
-        )
-
-        print(
-    f"Synced {len(synced)} guild commands",
-    flush=True
-)
 
 
 bot = ClanGuard(
@@ -235,14 +224,29 @@ async def clan_check():
 @bot.event
 async def on_ready():
 
-    print(
-    f"Logged in as {bot.user}",
-    flush=True
+    guild = discord.Object(
+        id=GUILD_ID
+    )
+
+    print("SYNCING COMMANDS...", flush=True)
+
+    synced = await bot.tree.sync(
+    guild=guild
     )
 
     print(
-    "Clan Guard online",
-    flush=True
+        f"Synced {len(synced)} guild commands",
+        flush=True
+    )
+
+    print(
+        f"Logged in as {bot.user}",
+        flush=True
+    )
+
+    print(
+        "Clan Guard online",
+        flush=True
     )
 
 
