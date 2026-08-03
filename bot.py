@@ -53,13 +53,6 @@ class ClanGuard(commands.Bot):
 
         print("DATABASE READY")
 
-        # Delete old global commands
-        self.tree.clear_commands(guild=None)
-
-        await self.tree.sync()
-
-        print("GLOBAL COMMANDS CLEARED")
-
         guild = discord.Object(
             id=GUILD_ID
         )
