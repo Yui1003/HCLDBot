@@ -21,24 +21,16 @@ load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-GUILD_ID = int(
-    os.getenv("GUILD_ID")
-)
+GUILD_ID = int(os.getenv("GUILD_ID"))
 
-LOG_CHANNEL_ID = int(
-    os.getenv("LOG_CHANNEL_ID")
-)
+LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
 
 ENABLE_KICK = (
-    os.getenv(
-        "ENABLE_KICK",
-        "false"
-    ).lower() == "true"
+    os.getenv("ENABLE_KICK", "false").lower() == "true"
 )
 
 
 intents = discord.Intents.default()
-
 intents.members = True
 intents.message_content = True
 
@@ -53,7 +45,34 @@ class ClanGuard(commands.Bot):
 
         print("DATABASE READY", flush=True)
 
+        guild = discord.Object(
+            id=GUILD_ID
+        )
 
+        print(
+            f"Commands loaded before sync: {len(self.tree.get_commands())}",
+            flush=True
+        )
+
+        for command in self.tree.get_commands():
+            print(
+                f"Command: {command.name}",
+                flush=True
+            )
+
+        print(
+            "SYNCING COMMANDS...",
+            flush=True
+        )
+
+        synced = await self.tree.sync(
+            guild=guild
+        )
+
+        print(
+            f"Synced {len(synced)} guild commands",
+            flush=True
+        )
 
 
 bot = ClanGuard(
@@ -65,7 +84,6 @@ bot = ClanGuard(
 processed_players = set()
 
 
-
 @tasks.loop(seconds=10)
 async def clan_check():
 
@@ -73,11 +91,11 @@ async def clan_check():
 
         players = await check_members()
 
-
     except Exception as e:
 
         print(
-            f"Checker error: {e}"
+            f"Checker error: {e}",
+            flush=True
         )
 
         return
@@ -96,7 +114,8 @@ async def clan_check():
     if guild is None:
 
         print(
-            "Guild not found"
+            "Guild not found",
+            flush=True
         )
 
         return
@@ -133,17 +152,16 @@ async def clan_check():
 
 
         print(
-            f"Detected removal candidate: "
-            f"{player['ign']} "
-            f"({player['game_id']})"
+            f"Detected removal candidate: {player['ign']} ({player['game_id']})",
+            flush=True
         )
 
 
         if not ENABLE_KICK:
 
-
             print(
-                "Kick disabled. Dry-run mode."
+                "Kick disabled. Dry-run mode.",
+                flush=True
             )
 
 
@@ -161,32 +179,30 @@ async def clan_check():
             continue
 
 
-
         if member.id == guild.owner_id:
 
             print(
-                "Skipped server owner."
+                "Skipped server owner.",
+                flush=True
             )
 
             continue
-
 
 
         if not guild.me.guild_permissions.kick_members:
 
             print(
-                "Bot missing Kick Members permission."
+                "Bot missing Kick Members permission.",
+                flush=True
             )
 
             continue
 
 
-
         try:
 
             await member.kick(
-                reason=
-                "No longer in Hidden Cloud Village"
+                reason="No longer in Hidden Cloud Village"
             )
 
 
@@ -196,59 +212,22 @@ async def clan_check():
 
 
             print(
-                f"Kicked {member}"
+                f"Kicked {member}",
+                flush=True
             )
-
-
-            if log_channel:
-
-                await log_channel.send(
-                    f"🚪 **Automatic Clan Removal**\n\n"
-                    f"Player: `{player['ign']}`\n"
-                    f"Ninja Saga ID: `{player['game_id']}`\n"
-                    f"Discord: {member.mention}\n\n"
-                    f"Reason: No longer in Hidden Cloud Village"
-                )
 
 
         except Exception as e:
 
             print(
-                f"Kick failed: {e}"
+                f"Kick failed: {e}",
+                flush=True
             )
-
-
 
 
 
 @bot.event
 async def on_ready():
-
-    guild = discord.Object(
-        id=GUILD_ID
-    )
-
-    print(
-        f"Commands loaded: {len(bot.tree.get_commands())}",
-        flush=True
-    )
-
-    for command in bot.tree.get_commands():
-        print(
-            f"Command: {command.name}",
-            flush=True
-        )
-
-    print("SYNCING COMMANDS...", flush=True)
-
-    synced = await bot.tree.sync(
-    guild=guild
-    )
-
-    print(
-        f"Synced {len(synced)} guild commands",
-        flush=True
-    )
 
     print(
         f"Logged in as {bot.user}",
@@ -260,20 +239,15 @@ async def on_ready():
         flush=True
     )
 
-
     print(
-    f"Kick mode: {ENABLE_KICK}",
-    flush=True
+        f"Kick mode: {ENABLE_KICK}",
+        flush=True
     )
 
 
     if not clan_check.is_running():
 
         clan_check.start()
-
-
-
-
 
 
 @bot.tree.command(
@@ -305,9 +279,6 @@ async def verify(
 
 
 
-
-
-
 @app_commands.checks.has_permissions(administrator=True)
 @bot.tree.command(
     name="clancheck",
@@ -325,9 +296,6 @@ async def clancheck(
         f"Members found: `{len(members)}`\n\n"
         f"`{members[:50]}`"
     )
-
-
-
 
 
 
@@ -389,6 +357,7 @@ async def verified(
     )
 
 
+
 @bot.tree.error
 async def on_app_command_error(
     interaction: discord.Interaction,
@@ -408,6 +377,7 @@ async def on_app_command_error(
         return
 
     raise error
+
 
 
 bot.run(TOKEN)
