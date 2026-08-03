@@ -47,14 +47,18 @@ class ClanGuard(commands.Bot):
 
     async def setup_hook(self):
 
+        print("SETUP HOOK STARTED")
+
         await setup_database()
 
-        # Clear old global commands (run once to remove duplicates)
-        self.tree.clear_commands(
-            guild=None
-        )
+        print("DATABASE READY")
+
+        # Delete old global commands
+        self.tree.clear_commands(guild=None)
 
         await self.tree.sync()
+
+        print("GLOBAL COMMANDS CLEARED")
 
         guild = discord.Object(
             id=GUILD_ID
