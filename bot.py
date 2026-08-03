@@ -37,12 +37,10 @@ ENABLE_KICK = (
 )
 
 
-
 intents = discord.Intents.default()
 
 intents.members = True
 intents.message_content = True
-
 
 
 class ClanGuard(commands.Bot):
@@ -51,15 +49,28 @@ class ClanGuard(commands.Bot):
 
         await setup_database()
 
-        await self.tree.sync()
+        # Sync commands instantly to your server
+        guild = discord.Object(
+            id=GUILD_ID
+        )
 
+        self.tree.copy_global_to(
+            guild=guild
+        )
+
+        synced = await self.tree.sync(
+            guild=guild
+        )
+
+        print(
+            f"Synced {len(synced)} commands"
+        )
 
 
 bot = ClanGuard(
     command_prefix="!",
     intents=intents
 )
-
 
 
 processed_players = set()
@@ -83,11 +94,9 @@ async def clan_check():
         return
 
 
-
     if not players:
 
         return
-
 
 
     guild = bot.get_guild(
@@ -104,18 +113,14 @@ async def clan_check():
         return
 
 
-
     log_channel = bot.get_channel(
         LOG_CHANNEL_ID
     )
 
 
-
     for player in players:
 
-
         discord_id = player["discord_id"]
-
 
 
         if discord_id in processed_players:
@@ -123,11 +128,9 @@ async def clan_check():
             continue
 
 
-
         processed_players.add(
             discord_id
         )
-
 
 
         member = guild.get_member(
@@ -135,11 +138,9 @@ async def clan_check():
         )
 
 
-
         if member is None:
 
             continue
-
 
 
         print(
@@ -147,7 +148,6 @@ async def clan_check():
             f"{player['ign']} "
             f"({player['game_id']})"
         )
-
 
 
         if not ENABLE_KICK:
@@ -173,7 +173,6 @@ async def clan_check():
 
 
 
-
         if member.id == guild.owner_id:
 
             print(
@@ -196,7 +195,6 @@ async def clan_check():
 
         try:
 
-
             await member.kick(
                 reason=
                 "No longer in Hidden Cloud Village"
@@ -208,11 +206,9 @@ async def clan_check():
             )
 
 
-
             print(
                 f"Kicked {member}"
             )
-
 
 
             if log_channel:
@@ -226,14 +222,11 @@ async def clan_check():
                 )
 
 
-
         except Exception as e:
 
             print(
                 f"Kick failed: {e}"
             )
-
-
 
 
 
@@ -259,7 +252,6 @@ async def on_ready():
     if not clan_check.is_running():
 
         clan_check.start()
-
 
 
 
@@ -298,7 +290,6 @@ async def verify(
 
 
 
-
 @bot.tree.command(
     name="clancheck",
     description="Check Hidden Cloud Village API members"
@@ -315,7 +306,6 @@ async def clancheck(
         f"Members found: `{len(members)}`\n\n"
         f"`{members[:50]}`"
     )
-
 
 
 
@@ -377,8 +367,6 @@ async def verified(
     await interaction.response.send_message(
         embed=embed
     )
-
-
 
 
 
