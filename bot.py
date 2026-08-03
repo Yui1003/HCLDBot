@@ -47,11 +47,11 @@ class ClanGuard(commands.Bot):
 
     async def setup_hook(self):
 
-        print("SETUP HOOK STARTED")
+        print("SETUP HOOK STARTED", flush=True)
 
         await setup_database()
 
-        print("DATABASE READY")
+        print("DATABASE READY", flush=True)
 
         guild = discord.Object(
             id=GUILD_ID
@@ -62,8 +62,9 @@ class ClanGuard(commands.Bot):
         )
 
         print(
-            f"Synced {len(synced)} guild commands"
-        )
+    f"Synced {len(synced)} guild commands",
+    flush=True
+)
 
 
 bot = ClanGuard(
@@ -235,16 +236,19 @@ async def clan_check():
 async def on_ready():
 
     print(
-        f"Logged in as {bot.user}"
+    f"Logged in as {bot.user}",
+    flush=True
     )
 
     print(
-        "Clan Guard online"
+    "Clan Guard online",
+    flush=True
     )
 
 
     print(
-        f"Kick mode: {ENABLE_KICK}"
+    f"Kick mode: {ENABLE_KICK}",
+    flush=True
     )
 
 
