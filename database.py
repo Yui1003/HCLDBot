@@ -94,6 +94,65 @@ async def get_users():
 
 
 
+async def get_user_by_discord_id(
+    discord_id
+):
+
+    async with aiosqlite.connect(DB_NAME) as db:
+
+        cursor = await db.execute(
+            """
+            SELECT
+                discord_id,
+                game_id,
+                ign,
+                missing_checks,
+                removed
+
+            FROM users
+
+            WHERE discord_id = ?
+            """,
+
+            (
+                discord_id,
+            )
+        )
+
+        return await cursor.fetchone()
+
+
+
+async def get_active_user_by_game_id(
+    game_id
+):
+
+    async with aiosqlite.connect(DB_NAME) as db:
+
+        cursor = await db.execute(
+            """
+            SELECT
+                discord_id,
+                game_id,
+                ign,
+                missing_checks,
+                removed
+
+            FROM users
+
+            WHERE game_id = ?
+            AND removed = 0
+            """,
+
+            (
+                game_id,
+            )
+        )
+
+        return await cursor.fetchone()
+
+
+
 # NEW COMMAND SUPPORT
 async def get_verified_users():
 

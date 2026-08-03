@@ -1,5 +1,5 @@
 from discord.ext import tasks
-from clan_checker import check_members, get_clan_members
+from clan_checker import check_members, get_clan_members, check_clan_membership
 
 import discord
 from discord.ext import commands
@@ -12,7 +12,9 @@ from database import (
     setup_database,
     add_user,
     mark_removed,
-    get_verified_users
+    get_verified_users,
+    get_user_by_discord_id,
+    get_active_user_by_game_id
 )
 
 
@@ -281,6 +283,87 @@ async def verify(
     ign: str
 ):
 
+    # Talking to the clan API can take a moment, so acknowledge
+    # the interaction immediately to avoid a 3s timeout.
+    await interaction.response.defer()
+
+
+    # 1) This Discord account already has an active link?
+    existing = await get_user_by_discord_id(
+        interaction.user.id
+    )
+
+    if existing and not existing[4]:  # existing[4] == removed
+
+        await interaction.followup.send(
+            f"❌ Your Discord account is already linked to "
+            f"Ninja Saga ID `{existing[1]}` (IGN: `{existing[2]}`).\n\n"
+            f"If this needs to change, please ask an admin to update it "
+            f"with `/modifyverify`."
+        )
+
+        return
+
+
+    # 2) Is this game_id already claimed by a *different* Discord account?
+    conflict = await get_active_user_by_game_id(
+        game_id
+    )
+
+    if conflict and conflict[0] != interaction.user.id:
+
+        await interaction.followup.send(
+            f"❌ Ninja Saga ID `{game_id}` is already linked to another "
+            f"Discord account.\n\n"
+            f"If this is a mistake, please contact an admin."
+        )
+
+        return
+
+
+    # 3) Validate against the live Hidden Cloud Village member list
+    result = await check_clan_membership(
+        game_id,
+        ign
+    )
+
+    if result["status"] == "error":
+
+        await interaction.followup.send(
+            "⚠️ Couldn't reach the clan API right now. Please try again "
+            "in a moment."
+        )
+
+        return
+
+
+    if result["status"] == "not_found":
+
+        await interaction.followup.send(
+            f"❌ Ninja Saga ID `{game_id}` was not found in Hidden Cloud "
+            f"Village's member list.\n\n"
+            f"Make sure you're in the clan and that you entered the "
+            f"correct ID."
+        )
+
+        return
+
+
+    if result["status"] == "name_mismatch":
+
+        await interaction.followup.send(
+            f"❌ That ID belongs to Hidden Cloud Village, but the IGN "
+            f"you entered doesn't match.\n\n"
+            f"The registered in-game name for that ID is: "
+            f"`{result['actual_name']}`\n\n"
+            f"Please try again with that exact name."
+        )
+
+        return
+
+
+    # result["status"] == "ok"
+
     await add_user(
         interaction.user.id,
         game_id,
@@ -288,7 +371,7 @@ async def verify(
     )
 
 
-    await interaction.response.send_message(
+    await interaction.followup.send(
         f"✅ Verified!\n\n"
         f"IGN: `{ign}`\n"
         f"Ninja Saga ID: `{game_id}`"
@@ -378,6 +461,108 @@ async def verified(
     await interaction.response.send_message(
         embed=embed
     )
+
+
+@app_commands.checks.has_permissions(administrator=True)
+@bot.tree.command(
+    name="modifyverify",
+    description="Admin: change a user's verified IGN and/or Ninja Saga ID"
+)
+@app_commands.describe(
+    member="The Discord member whose verification to modify",
+    new_game_id="New Ninja Saga ID (leave empty to keep current)",
+    new_ign="New IGN (leave empty to keep current)",
+    force="Bypass the duplicate-ID safety check (default: off)"
+)
+async def modifyverify(
+    interaction: discord.Interaction,
+    member: discord.Member,
+    new_game_id: int = None,
+    new_ign: str = None,
+    force: bool = False
+):
+
+    if new_game_id is None and new_ign is None:
+
+        await interaction.response.send_message(
+            "❌ You need to provide at least one of `new_game_id` or "
+            "`new_ign` to change.",
+            ephemeral=True
+        )
+
+        return
+
+
+    current = await get_user_by_discord_id(
+        member.id
+    )
+
+    if current is None:
+
+        await interaction.response.send_message(
+            f"❌ {member.mention} isn't verified yet. To enroll them, "
+            f"provide both `new_game_id` and `new_ign`.",
+            ephemeral=True
+        )
+
+        if new_game_id is None or new_ign is None:
+
+            return
+
+
+        current = (member.id, None, None, 0, 0)
+
+
+    old_game_id = current[1]
+    old_ign = current[2]
+
+    resolved_game_id = (
+        new_game_id
+        if new_game_id is not None
+        else old_game_id
+    )
+
+    resolved_ign = (
+        new_ign
+        if new_ign is not None
+        else old_ign
+    )
+
+
+    if new_game_id is not None and not force:
+
+        conflict = await get_active_user_by_game_id(
+            resolved_game_id
+        )
+
+        if conflict and conflict[0] != member.id:
+
+            await interaction.response.send_message(
+                f"❌ Ninja Saga ID `{resolved_game_id}` is already "
+                f"linked to another Discord account (<@{conflict[0]}>, "
+                f"IGN: `{conflict[2]}`).\n\n"
+                f"If this is intentional, re-run the command with "
+                f"`force: True`.",
+                ephemeral=True
+            )
+
+            return
+
+
+    await add_user(
+        member.id,
+        resolved_game_id,
+        resolved_ign
+    )
+
+
+    await interaction.response.send_message(
+        f"✅ Updated verification for {member.mention}\n\n"
+        f"Ninja Saga ID: `{old_game_id}` → `{resolved_game_id}`\n"
+        f"IGN: `{old_ign}` → `{resolved_ign}`"
+    )
+
+
 
 
 @bot.tree.error
