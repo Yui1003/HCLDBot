@@ -49,13 +49,15 @@ class ClanGuard(commands.Bot):
 
         await setup_database()
 
-        # Sync commands instantly to your server
-        guild = discord.Object(
-            id=GUILD_ID
+        # Clear old global commands (run once to remove duplicates)
+        self.tree.clear_commands(
+            guild=None
         )
 
-        self.tree.copy_global_to(
-            guild=guild
+        await self.tree.sync()
+
+        guild = discord.Object(
+            id=GUILD_ID
         )
 
         synced = await self.tree.sync(
@@ -63,7 +65,7 @@ class ClanGuard(commands.Bot):
         )
 
         print(
-            f"Synced {len(synced)} commands"
+            f"Synced {len(synced)} guild commands"
         )
 
 
