@@ -21,16 +21,24 @@ load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-GUILD_ID = int(os.getenv("GUILD_ID"))
+GUILD_ID = int(
+    os.getenv("GUILD_ID")
+)
 
-LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
+LOG_CHANNEL_ID = int(
+    os.getenv("LOG_CHANNEL_ID")
+)
 
 ENABLE_KICK = (
-    os.getenv("ENABLE_KICK", "false").lower() == "true"
+    os.getenv(
+        "ENABLE_KICK",
+        "false"
+    ).lower() == "true"
 )
 
 
 intents = discord.Intents.default()
+
 intents.members = True
 intents.message_content = True
 
@@ -39,50 +47,32 @@ class ClanGuard(commands.Bot):
 
     async def setup_hook(self):
 
-        print("SETUP HOOK STARTED", flush=True)
-
         await setup_database()
-
-        print("DATABASE READY", flush=True)
 
         guild = discord.Object(
             id=GUILD_ID
         )
 
-        print(
-            f"Commands loaded before sync: {len(self.tree.get_commands())}",
-            flush=True
+        # Copy the (currently global) commands into guild scope
+        # BEFORE wiping the global ones, so they aren't lost.
+        self.tree.copy_global_to(
+            guild=guild
         )
 
-        for command in self.tree.get_commands():
-            print(
-                f"Command: {command.name}",
-                flush=True
-            )
-
-        print(
-            "SYNCING COMMANDS...",
-            flush=True
-        )
-
-        print("CLEARING GLOBAL COMMANDS...", flush=True)
-
+        # Now clear the old global registrations so they stop
+        # showing up as duplicates (run once, then this list stays empty).
         self.tree.clear_commands(
             guild=None
         )
 
-        await self.tree.sync()
-
-        print("GLOBAL COMMANDS CLEARED", flush=True)
-
+        await self.tree.sync()  # pushes the empty global list -> deletes old globals
 
         synced = await self.tree.sync(
             guild=guild
-        )
+        )  # pushes the guild-scoped copies -> instant, no dupes
 
         print(
-            f"Synced {len(synced)} guild commands",
-            flush=True
+            f"Synced {len(synced)} guild commands"
         )
 
 
@@ -95,6 +85,7 @@ bot = ClanGuard(
 processed_players = set()
 
 
+
 @tasks.loop(seconds=10)
 async def clan_check():
 
@@ -102,11 +93,11 @@ async def clan_check():
 
         players = await check_members()
 
+
     except Exception as e:
 
         print(
-            f"Checker error: {e}",
-            flush=True
+            f"Checker error: {e}"
         )
 
         return
@@ -125,8 +116,7 @@ async def clan_check():
     if guild is None:
 
         print(
-            "Guild not found",
-            flush=True
+            "Guild not found"
         )
 
         return
@@ -163,16 +153,17 @@ async def clan_check():
 
 
         print(
-            f"Detected removal candidate: {player['ign']} ({player['game_id']})",
-            flush=True
+            f"Detected removal candidate: "
+            f"{player['ign']} "
+            f"({player['game_id']})"
         )
 
 
         if not ENABLE_KICK:
 
+
             print(
-                "Kick disabled. Dry-run mode.",
-                flush=True
+                "Kick disabled. Dry-run mode."
             )
 
 
@@ -190,30 +181,32 @@ async def clan_check():
             continue
 
 
+
         if member.id == guild.owner_id:
 
             print(
-                "Skipped server owner.",
-                flush=True
+                "Skipped server owner."
             )
 
             continue
+
 
 
         if not guild.me.guild_permissions.kick_members:
 
             print(
-                "Bot missing Kick Members permission.",
-                flush=True
+                "Bot missing Kick Members permission."
             )
 
             continue
 
 
+
         try:
 
             await member.kick(
-                reason="No longer in Hidden Cloud Village"
+                reason=
+                "No longer in Hidden Cloud Village"
             )
 
 
@@ -223,17 +216,28 @@ async def clan_check():
 
 
             print(
-                f"Kicked {member}",
-                flush=True
+                f"Kicked {member}"
             )
+
+
+            if log_channel:
+
+                await log_channel.send(
+                    f"🚪 **Automatic Clan Removal**\n\n"
+                    f"Player: `{player['ign']}`\n"
+                    f"Ninja Saga ID: `{player['game_id']}`\n"
+                    f"Discord: {member.mention}\n\n"
+                    f"Reason: No longer in Hidden Cloud Village"
+                )
 
 
         except Exception as e:
 
             print(
-                f"Kick failed: {e}",
-                flush=True
+                f"Kick failed: {e}"
             )
+
+
 
 
 
@@ -241,24 +245,26 @@ async def clan_check():
 async def on_ready():
 
     print(
-        f"Logged in as {bot.user}",
-        flush=True
+        f"Logged in as {bot.user}"
     )
 
     print(
-        "Clan Guard online",
-        flush=True
+        "Clan Guard online"
     )
 
+
     print(
-        f"Kick mode: {ENABLE_KICK}",
-        flush=True
+        f"Kick mode: {ENABLE_KICK}"
     )
 
 
     if not clan_check.is_running():
 
         clan_check.start()
+
+
+
+
 
 
 @bot.tree.command(
@@ -290,6 +296,9 @@ async def verify(
 
 
 
+
+
+
 @app_commands.checks.has_permissions(administrator=True)
 @bot.tree.command(
     name="clancheck",
@@ -307,6 +316,9 @@ async def clancheck(
         f"Members found: `{len(members)}`\n\n"
         f"`{members[:50]}`"
     )
+
+
+
 
 
 
@@ -368,7 +380,6 @@ async def verified(
     )
 
 
-
 @bot.tree.error
 async def on_app_command_error(
     interaction: discord.Interaction,
@@ -388,7 +399,6 @@ async def on_app_command_error(
         return
 
     raise error
-
 
 
 bot.run(TOKEN)
