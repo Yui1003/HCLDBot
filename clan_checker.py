@@ -29,10 +29,14 @@ def _normalize_name(name: str) -> str:
 async def get_clan_data():
     """
     Fetches the live rankings JSON and returns the member_list
-    (list of {"id", "level", "name", "reputation"}) for CLAN_NAME.
+    (list of {"name", "premium", "level", "reputation"}) for CLAN_NAME.
+
+    NOTE: as of the current API, member entries no longer include a
+    numeric id - "name" (the in-game IGN) is the only identifier we
+    have to match against.
 
     Returns None if the API could not be reached, returned a bad
-    status, or the clan could not be found in the payload — callers
+    status, or the clan could not be found in the payload - callers
     should treat None as "could not verify right now", not as
     "clan is empty".
     """
@@ -73,7 +77,7 @@ async def get_clan_data():
 
     for clan in data.get("clans", []):
 
-        if clan.get("name") == CLAN_NAME:
+        if _normalize_name(clan.get("name", "")) == _normalize_name(CLAN_NAME):
 
             return clan.get(
                 "member_list",
@@ -90,7 +94,7 @@ async def get_clan_data():
 
 
 async def get_clan_members():
-    """Backwards-compatible helper: just the list of member IDs (ints)."""
+    """Backwards-compatible helper: just the list of member IGNs (strings)."""
 
     member_list = await get_clan_data()
 
@@ -100,24 +104,24 @@ async def get_clan_members():
 
 
     return [
-        member["id"]
+        member.get("name", "")
         for member in member_list
     ]
 
 
 
-async def check_clan_membership(game_id: int, ign: str):
+async def check_clan_membership(ign: str):
     """
-    Validates a (game_id, ign) pair against the live Hidden Cloud
-    Village member list.
+    Validates an ign against the live Hidden Cloud Village member list.
 
     Returns a dict with a "status" key, one of:
 
-        "ok"            - game_id is in the clan and ign matches
-        "not_found"     - game_id is not in the clan's member list
-        "name_mismatch" - game_id is in the clan, but the ign given
-                           doesn't match. Includes "actual_name".
-        "error"         - couldn't reach / parse the API right now.
+        "ok"        - ign (normalized) matches a current clan member
+        "not_found" - ign is not in the clan's member list
+        "error"     - couldn't reach / parse the API right now.
+
+    There is no more "name_mismatch" case: the API only exposes names
+    now, so there's nothing left to cross-check a name against.
     """
 
     member_list = await get_clan_data()
@@ -129,26 +133,14 @@ async def check_clan_membership(game_id: int, ign: str):
         }
 
 
+    normalized_ign = _normalize_name(ign)
+
     for member in member_list:
 
-        if member.get("id") == game_id:
-
-            actual_name = member.get(
-                "name",
-                ""
-            )
-
-
-            if _normalize_name(actual_name) == _normalize_name(ign):
-
-                return {
-                    "status": "ok"
-                }
-
+        if _normalize_name(member.get("name", "")) == normalized_ign:
 
             return {
-                "status": "name_mismatch",
-                "actual_name": actual_name
+                "status": "ok"
             }
 
 
@@ -169,6 +161,11 @@ async def check_members():
         return []
 
 
+    normalized_clan_members = {
+        _normalize_name(name)
+        for name in clan_members
+    }
+
 
     users = await get_users()
 
@@ -178,7 +175,6 @@ async def check_members():
 
     for (
         discord_id,
-        game_id,
         ign,
         missing,
         removed
@@ -194,7 +190,7 @@ async def check_members():
 
 
 
-        if game_id not in clan_members:
+        if _normalize_name(ign) not in normalized_clan_members:
 
             missing += 1
 
@@ -211,15 +207,14 @@ async def check_members():
 
 
 
-        # Require 6 failed checks
-        # 6 x 10 seconds = about 1 minute
+        # Require 3 failed checks
+        # 3 x 10 seconds = about 30 seconds
 
         if missing >= 3:
 
             results.append(
                 {
                     "discord_id": discord_id,
-                    "game_id": game_id,
                     "ign": ign
                 }
             )
